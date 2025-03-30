@@ -1,22 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
-
-interface IERC20 {
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-    function transfer(address recipient, uint256 amount) external returns (bool);
-}
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract NagOrder {
     struct Order {
-        uint64 orderId;
+        uint256 orderId;
         uint8 status; // 0: Created, 1: Taken, 2: Confirmed, 3: Completed, 4: Failed
-        uint64 modelHash;
-        uint64[] relayPubkeyList;
-        uint64 down;
-        uint64 cost;
-        uint64 tip;
+        uint256 modelHash;
+        uint256[] relayPubkeyList;
+        uint256 down;
+        uint256 cost;
+        uint256 tip;
         address taker;
-        uint64 product;
+        uint256 product;
     }
 
     mapping(address => Order[]) public orderLists;
@@ -24,35 +20,35 @@ contract NagOrder {
 
     event Pull(
         address indexed userAddress,
-        uint64 indexed orderId,
-        uint64 modelHash,
-        uint64[] relayPubkeyList,
-        uint64 down,
-        uint64 cost,
-        uint64 tip
+        uint256 indexed orderId,
+        uint256 modelHash,
+        uint256[] relayPubkeyList,
+        uint256 down,
+        uint256 cost,
+        uint256 tip
     );
 
     event RaisePayment(
         address indexed userAddress,
-        uint64 indexed orderId,
-        uint64 modelHash,
-        uint64[] relayPubkeyList,
-        uint64 down,
-        uint64 cost,
-        uint64 tip
+        uint256 indexed orderId,
+        uint256 modelHash,
+        uint256[] relayPubkeyList,
+        uint256 down,
+        uint256 cost,
+        uint256 tip
     );
 
     event TakeOrder(
         address indexed relayAddress,
-        uint64 indexed orderId,
+        uint256 indexed orderId,
         address indexed orderAddress
     );
 
     event CompleteOrder(
         address indexed orderAddress,
-        uint64 indexed orderId,
-        uint64 prime1,
-        uint64 prime2
+        uint256 indexed orderId,
+        uint256 prime1,
+        uint256 prime2
     );
 
     constructor(address _aptosCoin) {
@@ -60,16 +56,16 @@ contract NagOrder {
     }
 
     function pull(
-        uint64 modelHash,
-        uint64[] memory relayPubkeyList,
-        uint64 down,
-        uint64 cost,
-        uint64 tip
+        uint256 modelHash,
+        uint256[] memory relayPubkeyList,
+        uint256 down,
+        uint256 cost,
+        uint256 tip
     ) external {
         uint256 sum = down + cost + tip;
         require(aptosCoin.transferFrom(msg.sender, address(this), sum), "Payment failed");
         
-        uint64 orderId = uint64(orderLists[msg.sender].length);
+        uint256 orderId = uint256(orderLists[msg.sender].length);
         orderLists[msg.sender].push(Order({
             orderId: orderId,
             status: 0,
@@ -86,10 +82,10 @@ contract NagOrder {
     }
 
     function raisePayment(
-        uint64 orderId,
-        uint64 down,
-        uint64 cost,
-        uint64 tip
+        uint256 orderId,
+        uint256 down,
+        uint256 cost,
+        uint256 tip
     ) external {
         Order storage order = orderLists[msg.sender][orderId];
         require(order.status == 0, "Invalid status");
@@ -105,10 +101,10 @@ contract NagOrder {
     }
 
     function takeOrder(
-        uint64 orderId,
+        uint256 orderId,
         address orderAddress,
-        uint64 relayPubkey,
-        uint64 x
+        uint256 relayPubkey,
+        uint256 x
     ) external {
         Order storage order = orderLists[orderAddress][orderId];
         require(order.status == 0, "Invalid status");
@@ -123,17 +119,17 @@ contract NagOrder {
         emit TakeOrder(msg.sender, orderId, orderAddress);
     }
 
-    function confirmReceived(uint64 orderId) external {
+    function confirmReceived(uint256 orderId) external {
         Order storage order = orderLists[msg.sender][orderId];
         require(order.status == 1, "Invalid status");
         order.status = 2;
     }
 
     function completeOrder(
-        uint64 orderId,
+        uint256 orderId,
         address orderAddress,
-        uint64 prime1,
-        uint64 prime2
+        uint256 prime1,
+        uint256 prime2
     ) external {
         Order storage order = orderLists[orderAddress][orderId];
         require(order.status == 2, "Invalid status");
@@ -148,11 +144,11 @@ contract NagOrder {
         }
     }
 
-    function getOrderStatus(address userAddress, uint64 orderId) external view returns (uint8) {
+    function getOrderStatus(address userAddress, uint256 orderId) external view returns (uint8) {
         return orderLists[userAddress][orderId].status;
     }
 
-    function contains(uint64[] memory list, uint64 key) private pure returns (bool) {
+    function contains(uint256[] memory list, uint256 key) private pure returns (bool) {
         for (uint i = 0; i < list.length; i++) {
             if (list[i] == key) return true;
         }

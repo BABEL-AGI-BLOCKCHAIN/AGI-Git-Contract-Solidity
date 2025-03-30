@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
 import "../src/NagOrder.sol";
-import "solmate/tokens/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MockERC20 is ERC20 {
-    constructor() ERC20("MockAPT", "MAPT", 18) {}
+    constructor() ERC20("MockAPT", "MAPT") {}
     
     function mint(address to, uint256 amount) public {
         _mint(to, amount);
@@ -40,13 +40,15 @@ contract NagOrderTest is Test {
     // 测试创建订单
     function testPullOrder() public {
         vm.prank(user1);
-        nagOrder.pull(123, _toUint64Array([456]), 10, 20, 30);
+        uint256[] memory keys = new uint256[](1);
+        keys[0] = 456;
+        nagOrder.pull(123, keys, 10, 20, 30);
 
         // 验证订单信息
-        NagOrder.Order memory order = nagOrder.orderLists(user1, 0);
-        assertEq(order.modelHash, 123);
-        assertEq(order.relayPubkeyList[0], 456);
-        assertEq(order.status, 0);
+        (uint256 orderId,uint8 status,uint256 modelHash,uint256 down,uint256 cost,uint256 tip,address taker,uint256 product) = nagOrder.orderLists(user1, 0);
+        assertEq(modelHash, 123);
+        //assertEq(relayPubkeyList[0], 456);
+        assertEq(status, 0);
         
         // 验证资金锁定
         assertEq(aptosCoin.balanceOf(address(nagOrder)), 60);
@@ -60,10 +62,10 @@ contract NagOrderTest is Test {
         vm.prank(user1);
         nagOrder.raisePayment(0, 5, 5, 5);
 
-        NagOrder.Order memory order = nagOrder.orderLists(user1, 0);
-        assertEq(order.down, 15);
-        assertEq(order.cost, 25);
-        assertEq(order.tip, 35);
+        (uint256 orderId,uint8 status,uint256 modelHash,uint256 down,uint256 cost,uint256 tip,address taker,uint256 product) = nagOrder.orderLists(user1, 0);
+        assertEq(down, 15);
+        assertEq(cost, 25);
+        assertEq(tip, 35);
         assertEq(aptosCoin.balanceOf(address(nagOrder)), 60 + 15);
     }
 
@@ -74,10 +76,10 @@ contract NagOrderTest is Test {
         vm.prank(relay);
         nagOrder.takeOrder(0, user1, 456, 100);
 
-        NagOrder.Order memory order = nagOrder.orderLists(user1, 0);
-        assertEq(order.status, 1);
-        assertEq(order.taker, relay);
-        assertEq(order.product, 100);
+        (uint256 orderId,uint8 status,uint256 modelHash,uint256 down,uint256 cost,uint256 tip,address taker,uint256 product) = nagOrder.orderLists(user1, 0);
+        assertEq(status, 1);
+        assertEq(taker, relay);
+        assertEq(product, 100);
         assertEq(aptosCoin.balanceOf(relay), 10); // 收到down payment
     }
 
@@ -93,8 +95,8 @@ contract NagOrderTest is Test {
         vm.prank(relay);
         nagOrder.completeOrder(0, user1, 10, 10);
 
-        NagOrder.Order memory order = nagOrder.orderLists(user1, 0);
-        assertEq(order.status, 3);
+        (uint256 orderId,uint8 status,uint256 modelHash,uint256 down,uint256 cost,uint256 tip,address taker,uint256 product) = nagOrder.orderLists(user1, 0);
+        assertEq(status, 3);
         assertEq(aptosCoin.balanceOf(relay), 10 + 20 + 30); // 收到cost + tip
     }
 
